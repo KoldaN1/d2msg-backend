@@ -15,10 +15,10 @@ export const startApp = async () => {
     logger.info("🐰 Connected to RabbitMQ");
 
     await fastify.listen({ port: config.port });
-    logger.info(`🚀 Gateway running on http://localhost:${config.port}`);
+    logger.info(`🚀 Auth-service running on http://localhost:${config.port}`);
 
     const shutdown = async () => {
-      logger.info("💥 Shutting down Profile-service...");
+      logger.info("💥 Shutting down Auth-service...");
       await fastify.close();
       await prisma.$disconnect();
       await closeRabbit();

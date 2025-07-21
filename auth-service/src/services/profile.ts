@@ -1,7 +1,8 @@
-import * as repo from "../repositories/profile";
+import * as repo from "../repositories/auth";
 import { hashPassword, comparePasswords } from "../utils/hash";
 import { createJwt } from "../utils/jwt";
 import { createHttpError } from "../errors/httpErrors";
+import { DecodedToken } from "../types/fastify";
 
 export const register = async (email: string, password: string, name?: string) => {
   const exists = await repo.findUserByEmail(email);
@@ -16,9 +17,5 @@ export const login = async (email: string, password: string) => {
   if (!user || !(await comparePasswords(password, user.password))) {
     throw createHttpError(401, "Invalid credentials");
   }
-  return createJwt({ id: user.id, email: user.email });
-};
-
-export const update = async (userId: string, updates: any) => {
-  return await repo.updateUser(userId, updates);
+  return createJwt({ userId: user.id } as DecodedToken, "1h");
 };

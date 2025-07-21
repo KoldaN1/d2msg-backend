@@ -2,7 +2,7 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 import { config } from "../config";
 
 interface DecodedToken extends JwtPayload {
-  id: string;
+  userId: string;
 }
 
 export const verifyToken = (token: string): DecodedToken => {

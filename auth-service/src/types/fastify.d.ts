@@ -3,7 +3,11 @@ import "fastify";
 declare module "fastify" {
   interface FastifyRequest {
     user?: {
-      id: string;
+      userId: string;
     };
   }
+}
+
+interface DecodedToken extends JwtPayload {
+  userId: string;
 }
