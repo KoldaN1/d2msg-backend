@@ -24,7 +24,7 @@ export const startApp = async () => {
 
   try {
     await initRabbit();
-    await fastify.listen({ port: config.port });
+    await fastify.listen({ port: config.port, host: config.host });
     logger.info(`🚀 Gateway running on http://localhost:${config.port}`);
   } catch (err) {
     logger.error(err);

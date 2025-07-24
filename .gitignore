@@ -1,0 +1,4 @@
+/docker/.env
+/docker/mailu.env
+/docker/traefik/acme.json
+/docker/traefik/dynamic.yml

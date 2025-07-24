@@ -1,0 +1,188 @@
+services:
+  traefik:
+    image: traefik:v2.10
+    container_name: traefik
+    restart: always
+    command:
+      - --log.level=INFO
+      - --accesslog=true
+      - --api.dashboard=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+      - ./traefik/acme.json:/letsencrypt/acme.json
+    networks:
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik.middlewares=auth@file"
+      - "traefik.http.routers.traefik.service=api@internal"
+
+  gateway:
+    image: gateway:latest
+    container_name: gateway
+    restart: always
+    env_file:
+      - ../gateway/.env
+    depends_on:
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gateway.rule=Host(`api.${DOMAIN}`)"
+      - "traefik.http.routers.gateway.entrypoints=websecure"
+      - "traefik.http.routers.gateway.tls.certresolver=letsencrypt"
+
+  auth-service:
+    image: auth-service:latest
+    container_name: auth-service
+    restart: always
+    env_file:
+      - ../auth-service/.env
+    depends_on:
+      gateway:
+        condition: service_started
+      redis:
+        condition: service_started
+      mongo:
+        condition: service_healthy
+    networks:
+      - backend
+    labels:
+      - "traefik.enable=false"
+
+  redis:
+    image: redis:7
+    container_name: redis
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
+    labels:
+      - "traefik.enable=false"
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBIT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBIT_PASSWORD}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.rabbitmq-ui.rule=Host(`rabbitmq.${DOMAIN}`)"
+      - "traefik.http.routers.rabbitmq-ui.entrypoints=websecure"
+      - "traefik.http.routers.rabbitmq-ui.tls.certresolver=letsencrypt"
+      - "traefik.http.services.rabbitmq-ui.loadbalancer.server.port=15672"
+    healthcheck:
+      test: ["CMD-SHELL", 'mongosh --eval ''db.adminCommand("ping").ok'' --quiet || exit 1']
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  mongo:
+    image: mongo:6.0
+    container_name: mongo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongodb/mongo-keyfile:/etc/mongo-keyfile:ro
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all", "--keyFile", "/etc/mongo-keyfile"]
+    networks:
+      - backend
+    labels:
+      - "traefik.enable=false"
+    healthcheck:
+      test: ["CMD", "mongo", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  minio:
+    image: minio/minio
+    container_name: minio
+    environment:
+      - MINIO_ROOT_USER=${MINIO_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_PASSWORD}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.minio-ui.rule=Host(`minio.${DOMAIN}`)"
+      - "traefik.http.routers.minio-ui.entrypoints=websecure"
+      - "traefik.http.routers.minio-ui.tls.certresolver=letsencrypt"
+      - "traefik.http.services.minio-ui.loadbalancer.server.port=9001"
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    container_name: mongo-express
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_USER}
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_PASSWORD}
+      - ME_CONFIG_MONGODB_SERVER=mongo
+      - ME_CONFIG_BASICAUTH_ENABLED=false
+    depends_on:
+      - mongo
+    networks:
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mongoexpress.rule=Host(`mongo.${DOMAIN}`)"
+      - "traefik.http.routers.mongoexpress.entrypoints=websecure"
+      - "traefik.http.routers.mongoexpress.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.mongoexpress.middlewares=auth@file"
+      - "traefik.http.services.mongoexpress.loadbalancer.server.port=8081"
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: redisinsight
+    environment:
+      - REDIS_URI=redis://:${REDIS_PASSWORD}@redis:6379
+    depends_on:
+      - redis
+    networks:
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.redisinsight.rule=Host(`redis.${DOMAIN}`)"
+      - "traefik.http.routers.redisinsight.entrypoints=websecure"
+      - "traefik.http.routers.redisinsight.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.redisinsight.middlewares=auth@file"
+
+volumes:
+  mongodb_data:
+  minio_data:
+  rabbitmq_data:
+  redis_data:
+
+networks:
+  backend:
+    driver: bridge

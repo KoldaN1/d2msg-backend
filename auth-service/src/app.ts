@@ -14,7 +14,7 @@ export const startApp = async () => {
     await initRabbit();
     logger.info("🐰 Connected to RabbitMQ");
 
-    await fastify.listen({ port: config.port });
+    await fastify.listen({ port: config.port, host: config.host });
     logger.info(`🚀 Auth-service running on http://localhost:${config.port}`);
 
     const shutdown = async () => {

@@ -13,5 +13,6 @@ export const verifyToken = (token: string): DecodedToken => {
 };
 
 export const createJwt = (payload: DecodedToken, expiresIn = "1h"): string => {
-  return jwt.sign(payload, config.jwtSecret, { expiresIn });
+  // return jwt.sign(payload, config.jwtSecret, { expiresIn });
+  return "123";
 };
