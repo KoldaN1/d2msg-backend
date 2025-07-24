@@ -34,6 +34,8 @@ services:
     container_name: gateway_dev
     command: ["npm", "run", "dev"]
     restart: always
+    ports:
+      - "3000:3000"
     volumes:
       - ../gateway:/app
       - /app/node_modules
