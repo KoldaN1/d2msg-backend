@@ -1,14 +1,14 @@
 import { createFastify } from "./server/fastify";
 import { config } from "./config";
 import { logger } from "./utils/logger";
-import { prisma } from "./utils/prisma";
+// import { prisma } from "./utils/prisma";
 import { closeRabbit, initRabbit } from "./server/rabbit";
 
 export const startApp = async () => {
   const fastify = createFastify();
 
   try {
-    await prisma.$connect();
+    // await prisma.$connect();
     logger.info("🔗 Prisma database running");
 
     await initRabbit();
@@ -20,7 +20,7 @@ export const startApp = async () => {
     const shutdown = async () => {
       logger.info("💥 Shutting down Auth-service...");
       await fastify.close();
-      await prisma.$disconnect();
+      // await prisma.$disconnect();
       await closeRabbit();
       process.exit(0);
     };

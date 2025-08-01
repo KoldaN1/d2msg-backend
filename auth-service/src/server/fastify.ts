@@ -9,7 +9,7 @@ export const createFastify = () => {
   const fastify = Fastify({ logger: config.isDev });
 
   fastify.register(helmet);
-  fastify.register(authRoutes, { prefix: "/api/auth" });
+  fastify.register(authRoutes);
 
   fastify.setErrorHandler((error, request, reply) => {
     logger.error(`[${request.method} ${request.url}] - ${error.message}`);

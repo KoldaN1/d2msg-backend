@@ -12,7 +12,10 @@ export const startApp = async () => {
   registerSocketHandlers(io);
 
   const shutdown = async () => {
-    logger.info("💥 Shutting down Gateway...");
+    logger.info({
+      type: "server",
+      message: "💥 Shutting down Gateway...",
+    });
     await fastify.close();
     await io.close();
     await closeRabbit();
@@ -25,7 +28,10 @@ export const startApp = async () => {
   try {
     await initRabbit();
     await fastify.listen({ port: config.port, host: config.host });
-    logger.info(`🚀 Gateway running on http://localhost:${config.port}`);
+    logger.info({
+      type: "server",
+      message: `🚀 Gateway running on http://localhost:${config.port}`,
+    });
   } catch (err) {
     logger.error(err);
     process.exit(1);

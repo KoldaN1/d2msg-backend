@@ -3,6 +3,7 @@ import { logger } from "../utils/logger";
 import { handleMessageEvents } from "./message";
 import { verifyToken } from "../utils/jwt";
 import { config } from "../config";
+import { activeWsConnections } from "../utils/metrics";
 
 export const registerSocketHandlers = (io: Server) => {
   io.use((socket, next) => {
@@ -25,19 +26,37 @@ export const registerSocketHandlers = (io: Server) => {
   });
 
   io.on("connection", (socket) => {
+    activeWsConnections.inc();
+
     const userId = socket.data.userId;
     socket.join(userId);
 
-    if (config.isDev) logger.info(`🔌 User connected: ${userId}`);
+    if (config.isDev)
+      logger.info({
+        type: "socket",
+        message: `✅ Connected: ${userId}`,
+        socketId: socket.id,
+      });
 
     handleMessageEvents(socket);
 
     socket.on("disconnect", () => {
-      if (config.isDev) logger.info(`❌ Disconnected: ${userId}`);
+      activeWsConnections.dec();
+
+      if (config.isDev)
+        logger.info({
+          type: "socket",
+          message: `❌ Disconnected: ${userId}`,
+          socketId: socket.id,
+        });
     });
 
     socket.on("error", (err) => {
-      logger.error(`Socket error from ${socket.id} (user: ${userId}): ${err.message}`);
+      logger.error({
+        type: "socket",
+        message: `Socket error for user ${userId}: ${err.message}`,
+        socketId: socket.id,
+      });
     });
   });
 };

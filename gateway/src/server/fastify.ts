@@ -1,19 +1,18 @@
 import Fastify from "fastify";
 import helmet from "@fastify/helmet";
-import cors from "@fastify/cors";
-import { config, corsOptions } from "../config";
-import { logger } from "../utils/logger";
+import { config } from "../config";
+import { registerRequestLogger } from "../utils/hooks/request-logger";
+import { metricsRoutes } from "../routes/metricsRoutes";
+import { proxyPlugin } from "../plugins/proxy";
 
 export const createFastify = () => {
   const fastify = Fastify({ logger: config.isDev });
 
   fastify.register(helmet);
-  fastify.register(cors, corsOptions);
+  fastify.register(metricsRoutes);
+  fastify.register(proxyPlugin);
 
-  fastify.setErrorHandler((error, request, reply) => {
-    logger.error(`[${request.method} ${request.url}] - ${error.message}`);
-    reply.status(500).send({ error: "Internal server error" });
-  });
+  registerRequestLogger(fastify);
 
   return fastify;
 };
