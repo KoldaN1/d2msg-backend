@@ -1,0 +1,17 @@
+{
+  "name": "@d2msg/schemas",
+  "version": "1.0.0",
+  "description": "Shared schemas for D2Msg backend services",
+  "author": {
+    "name": "Denis Zakharov",
+    "email": "lolilegalst@gmail.com"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "zod": "^4.0.14"
+  }
+}

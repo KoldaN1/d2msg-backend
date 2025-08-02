@@ -2,7 +2,6 @@
 import { hashPassword, comparePasswords } from "../utils/hash";
 import { createJwt } from "../utils/jwt";
 import { createHttpError } from "../errors/httpErrors";
-import { DecodedToken } from "../types/fastify";
 
 export const register = async (email: string, password: string, name?: string) => {
   // const exists = await repo.findUserByEmail(email);
